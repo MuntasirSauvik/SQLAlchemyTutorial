@@ -9,6 +9,7 @@ from sqlalchemy import select, and_, text, String
 from sqlalchemy.sql import table, literal_column
 from sqlalchemy import func
 from sqlalchemy import func, desc
+from sqlalchemy.dialects.oracle import dialect as OracleDialect
 
 # Version Check
 print("Version Check")
@@ -283,3 +284,65 @@ stmt = select([u1a, u1b]).where(u1a.c.name > u1b.c.name).order_by(u1a.c.name)
 # using "name" here would be ambiguous
 
 print(conn.execute(stmt).fetchall())
+
+# Using Aliases and Subqueries
+print("\nUsing Aliases and Subqueries")
+a1 = addresses.alias()
+a2 = addresses.alias()
+s = select([users]).where(
+    and_(
+        users.c.id == a1.c.user_id,
+        users.c.id == a2.c.user_id,
+        a1.c.email_address == 'jack@msn.com',
+        a2.c.email_address == 'jack@yahoo.com'
+    ))
+print(conn.execute(s).fetchall())
+
+# For the purposes of debugging, it can be specified by passing a string name to the FromClause.alias() method:
+print("\nFor the purposes of debugging, it can be specified by passing a string name to the FromClause.alias() method:")
+a1 = addresses.alias('a1')
+address_subq = s.alias()
+s = select([users.c.name]).where(users.c.id == address_subq.c.id)
+print(conn.execute(s).fetchall())
+
+# Using Joins
+print("\nUsing Joins")
+print(users.join(addresses))
+
+# if we want to join on all users who use the same name in their email address as their username:
+print("\nif we want to join on all users who use the same name in their email address as their username:")
+print(users.join(addresses, addresses.c.email_address.like(users.c.name + '%')))
+
+s = select([users.c.fullname]).select_from(
+    users.join(addresses,
+    addresses.c.email_address.like(users.c.name + '%'))
+)
+print(conn.execute(s).fetchall())
+
+# The FromClause.outerjoin() method creates LEFT OUTER JOIN constructs, and is used in the same way as FromClause.join():
+print("\nThe FromClause.outerjoin() method creates LEFT OUTER JOIN constructs, and is used in the same way as "
+      "FromClause.join():")
+s = select([users.c.fullname]).select_from(users.outerjoin(addresses))
+print(s)
+
+#Oracle-specific SQL:
+print("\nOracle-specific SQL:")
+print(s.compile(dialect=OracleDialect(use_ansi=False)))
+
+
+# Common Table Expressions (CTE)
+print("\nCommon Table Expressions (CTE)")
+users_cte = select([users.c.id, users.c.name]).where(users.c.name == 'wendy').cte()
+stmt = select([addresses]).where(addresses.c.user_id == users_cte.c.id).order_by(addresses.c.id)
+print(conn.execute(stmt).fetchall())
+
+# The RECURSIVE format of CTE
+print("\nThe RECURSIVE format of CTE")
+users_cte = select([users.c.id, users.c.name]).cte(recursive=True)
+users_recursive = users_cte.alias()
+users_cte = users_cte.union(select([users.c.id, users.c.name]).where(users.c.id > users_recursive.c.id))
+stmt = select([addresses]).where(addresses.c.user_id == users_cte.c.id).order_by(addresses.c.id)
+print(conn.execute(stmt).fetchall())
+
+#
+print("\n")
