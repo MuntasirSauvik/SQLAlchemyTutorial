@@ -10,6 +10,9 @@ from sqlalchemy.sql import table, literal_column
 from sqlalchemy import func
 from sqlalchemy import func, desc
 from sqlalchemy.dialects.oracle import dialect as OracleDialect
+from sqlalchemy.sql import bindparam
+from sqlalchemy.sql import func
+from sqlalchemy.sql import column
 
 # Version Check
 print("Version Check")
@@ -343,6 +346,104 @@ users_recursive = users_cte.alias()
 users_cte = users_cte.union(select([users.c.id, users.c.name]).where(users.c.id > users_recursive.c.id))
 stmt = select([addresses]).where(addresses.c.user_id == users_cte.c.id).order_by(addresses.c.id)
 print(conn.execute(stmt).fetchall())
+
+# Everything Else
+print("\nEverything Else")
+
+# Bind Parameter Objects
+print("\nBind Parameter Objects")
+s = users.select(users.c.name == bindparam('username'))
+print(conn.execute(s, username='wendy').fetchall())
+
+
+# Another important aspect of bindparam() is that it may be assigned a type.
+print("\nAnother important aspect of bindparam() is that it may be assigned a type. ")
+s = users.select(users.c.name.like(bindparam('username', type_=String) + text("'%'")))
+print(conn.execute(s, username='wendy').fetchall())
+
+# bindparam() constructs of the same name can also be used multiple times, where only a single named value is needed in the execute parameters:
+print("\n bindparam() constructs of the same name can also be used multiple times, where only a single named value is "
+      "needed in the execute parameters:")
+s = select([users, addresses]).where(
+    or_(
+        users.c.name.like(
+        bindparam('name', type_=String) + text("'%'")),
+        addresses.c.email_address.like(
+        bindparam('name', type_=String) + text("'@%'"))
+        )
+    ).select_from(users.outerjoin(addresses)).order_by(addresses.c.id)
+print(conn.execute(s, name='jack').fetchall()
+      )
+
+# Functions
+print("\nFunctions")
+print(func.now())
+print(func.concat('x', 'y'))
+print(func.xyz_my_goofy_function())
+
+print("Some functions are know by SQLAlchemy thus they don't get the parenthesis added after them")
+print(func.current_timestamp())
+
+# Below, we use the result function scalar() to just read the first column of the first row and then close the result
+print("\nBelow, we use the result function scalar() to just read the first column of the first row and then close the result")
+print(
+    conn.execute(
+        select([
+            func.max(addresses.c.email_address, type_=String).
+            label('maxemail')
+        ])
+    ).scalar()
+)
+
+# we can construct using “lexical” column objects as well as bind parameters:
+print("\nwe can construct using “lexical” column objects as well as bind parameters:")
+calculate = select([column('q'), column('z'), column('r')]).select_from(
+                func.calculate(
+                    bindparam('x'),
+                    bindparam('y')
+                )
+            )
+calc = calculate.alias()
+print(select([users]).where(users.c.id > calc.c.z))
+
+# If we wanted to use our calculate statement twice with different bind parameters, the unique_params() function will
+# create copies for us, and mark the bind parameters as “unique” so that conflicting names are isolated.
+print("\nIf we wanted to use our calculate statement twice with different bind parameters, the unique_params() function "
+      "will create copies for us, and mark the bind parameters as “unique” so that conflicting names are isolated. ")
+calc1 = calculate.alias('c1').unique_params(x=17, y=45)
+calc2 = calculate.alias('c2').unique_params(x=5, y=12)
+s = select([users]).where(
+    users.c.id.between(calc1.c.z, calc2.c.z))
+
+print(s)
+print(s.compile().params)
+
+# Window Functions
+print("\nWindow Functions")
+
+s = select([
+        users.c.id,
+        func.row_number().over(order_by=users.c.name)
+    ])
+print(s)
+
+# FunctionElement.over() also supports range specification using either the over.rows or over.range parameters:
+print("\nFunctionElement.over() also supports range specification using either the over.rows or over.range parameters:")
+s = select([
+        users.c.id,
+        func.row_number().over(
+            order_by=users.c.name,
+            rows=(-2, None)
+        )
+    ])
+print(s)
+
+#
+print("\n")
+
+
+#
+print("\n")
 
 #
 print("\n")
