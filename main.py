@@ -4,7 +4,11 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy.sql import select
 from sqlalchemy import type_coerce
 from sqlalchemy.sql import and_, or_, not_
-
+from sqlalchemy.sql import text
+from sqlalchemy import select, and_, text, String
+from sqlalchemy.sql import table, literal_column
+from sqlalchemy import func
+from sqlalchemy import func, desc
 
 # Version Check
 print("Version Check")
@@ -185,3 +189,97 @@ s = select([(users.c.fullname + ", " + addresses.c.email_address).label('title')
                 )
             )
 print(conn.execute(s).fetchall())
+
+# Using Textual SQL
+
+s = text("SELECT users.fullname || ', ' || addresses.email_address AS title "
+         "FROM users, addresses "
+         "WHERE users.id = addresses.user_id "
+         "AND users.name BETWEEN :x AND :y "
+         "AND (addresses.email_address LIKE :e1 "
+         "OR addresses.email_address LIKE :e2)")
+
+print(conn.execute(s, x='m', y='z', e1='%@aol.com', e2='%@msn.com').fetchall())
+
+# Specifying Bound Parameter Behaviors
+print("\nSpecifying Bound Parameter Behaviors")
+stmt = text("SELECT * FROM users WHERE users.name BETWEEN :x AND :y")
+stmt = stmt.bindparams(x="m", y="z")
+print(stmt)
+
+# Specifying Result-Column Behaviors
+print("\nSpecifying Result-Column Behaviors")
+stmt = text("SELECT users.id, addresses.id, users.id, "
+    "users.name, addresses.email_address AS email "
+    "FROM users JOIN addresses ON users.id=addresses.user_id "
+    "WHERE users.id = 1").columns(
+    users.c.id,
+    addresses.c.id,
+    addresses.c.user_id,
+    users.c.name,
+    addresses.c.email_address
+)
+result = conn.execute(stmt)
+print(result)
+row = result.fetchone()
+print(row)
+print(row[addresses.c.email_address])
+# row["id"]
+
+# Using text() fragments inside bigger statements
+print("\nUsing text() fragments inside bigger statements")
+
+s = select([
+    text("users.fullname || ', ' || addresses.email_address AS title")]).where(
+    and_(
+        text("users.id = addresses.user_id"),
+        text("users.name BETWEEN 'm' AND 'z'"),
+        text(
+            "(addresses.email_address LIKE :x "
+            "OR addresses.email_address LIKE :y)")
+    )
+        ).select_from(text('users, addresses'))
+print(conn.execute(s, x='%@aol.com', y='%@msn.com').fetchall())
+
+# Using More Specific Text with table(), literal_column(), and column()
+print("Using More Specific Text with table(), literal_column(), and column()")
+
+
+s = select([literal_column("users.fullname", String) +', ' + literal_column("addresses.email_address").label("title")
+    ]).where(
+            and_(
+                literal_column("users.id") == literal_column("addresses.user_id"),
+                text("users.name BETWEEN 'm' AND 'z'"),
+                text(
+                    "(addresses.email_address LIKE :x OR "
+                    "addresses.email_address LIKE :y)")
+            )
+    ).select_from(table('users')).select_from(table('addresses'))
+
+print(conn.execute(s, x='%@aol.com', y='%@msn.com').fetchall())
+
+# Ordering or Grouping by a Label
+print("\nOrdering or Grouping by a Label")
+
+stmt = select([addresses.c.user_id,
+        func.count(addresses.c.id).label('num_addresses')]).group_by("user_id").order_by("user_id", "num_addresses")
+print(conn.execute(stmt).fetchall())
+
+# We can use modifiers like asc() or desc() by passing the string name:
+print("\nWe can use modifiers like asc() or desc() by passing the string name:")
+
+stmt = select([
+    addresses.c.user_id,
+    func.count(addresses.c.id).label('num_addresses')]).\
+    group_by("user_id").order_by("user_id", desc("num_addresses"))
+
+print(conn.execute(stmt).fetchall())
+
+# Below, we illustrate how using the ColumnElement eliminates ambiguity when we want to order by a column name that appears more than once:
+print("\nBelow, we illustrate how using the ColumnElement eliminates ambiguity when we want to order by a column name that appears more than once:")
+
+u1a, u1b = users.alias(), users.alias()
+stmt = select([u1a, u1b]).where(u1a.c.name > u1b.c.name).order_by(u1a.c.name)
+# using "name" here would be ambiguous
+
+print(conn.execute(stmt).fetchall())
