@@ -8,6 +8,9 @@ from sqlalchemy import text
 from sqlalchemy import func
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql import func
+from sqlalchemy.sql import exists
 
 # Version Check
 print("Version Check")
@@ -313,3 +316,88 @@ for u, a in session.query(User, Address).filter(
 print("\nThe actual SQL JOIN syntax, on the other hand, is most easily achieved using the Query.join() method:")
 print(session.query(User, Address).join(Address).filter(
                                         Address.email_address=='jack@google.com').all())
+
+# Using Aliases
+print("\nUsing Aliases:")
+adalias1 = aliased(Address)
+adalias2 = aliased(Address)
+
+for username, email1, email2 in \
+    session.query(User.name, adalias1.email_address, adalias2.email_address).\
+    join(User.addresses.of_type(adalias1)).\
+    join(User.addresses.of_type(adalias2)).\
+    filter(adalias1.email_address=='jack@google.com').\
+    filter(adalias2.email_address=='j25@yahoo.com'):
+    print(username, email1, email2)
+
+# Using Subqueries
+print("\nUsing Subqueries:")
+stmt = session.query(Address.user_id, func.count('*').\
+    label('address_count')).\
+    group_by(Address.user_id).subquery()
+print(stmt,"\n")
+for u, count in session.query(User, stmt.c.address_count).\
+    outerjoin(stmt, User.id==stmt.c.user_id).order_by(User.id):
+    print(u, count)
+
+# Selecting Entities from Subqueries
+print("\nSeleceting Entities from Subqueries:")
+stmt = session.query(Address).\
+        filter(Address.email_address != 'j25@yahoo.com').\
+        subquery()
+adalias = aliased(Address, stmt)
+for user, address in session.query(User, adalias).\
+        join(adalias, User.addresses):
+    print(user)
+    print(address)
+
+# Using EXISTS
+print("\nUsing EXISTS:")
+print("\nThere is an explicit EXISTS construct, which looks like this:")
+print("stmt = exists().where(Address.user_id==User.id)")
+stmt = exists().where(Address.user_id==User.id)
+for name, in session.query(User.name).filter(stmt):
+    print("name:",name)
+
+print("\nThe Query features several operators which make usage of EXISTS automatically. Above, the statement can be "
+      "expressed along the User.addresses relationship using Comparator.any():")
+for name, in session.query(User.name).\
+    filter(User.addresses.any()):
+    print("name:",name)
+
+print("\nComparator.any() takes criterion as well, to limit the rows matched:")
+for name, in session.query(User.name).\
+    filter(User.addresses.any(Address.email_address.like('%google%'))):
+    print("name:",name)
+
+print("\nComparator.has() is the same operator as Comparator.any() for many-to-one relationships (note the ~ operator "
+      "here too, which means “NOT”):")
+print("session.query(Address).filter(~Address.user.has(User.name=='jack')).all(): ",session.query(Address).\
+                                                        filter(~Address.user.has(User.name=='jack')).all())
+
+# Common Relationship Operators
+print("\nCommon Relationship Operators:")
+
+print("\nComparator.__eq__()(many - to - one “equals” comparison):")
+print("query.filter(Address.user == someuser)")
+
+print("\nComparator.__ne__()(many - to - one “not equals” comparison):")
+print("query.filter(Address.user != someuser)")
+
+print("\nIS NULL(many - to - one comparison, also uses Comparator.__eq__()):")
+print("query.filter(Address.user == None)")
+
+print("\nComparator.contains()(used for one - to - many collections):")
+print("query.filter(User.addresses.contains(someaddress))")
+
+print("\nComparator.any()(used for collections):")
+print("query.filter(User.addresses.any(Address.email_address == 'bar'))")
+print("also takes keyword arguments:")
+print("query.filter(User.addresses.any(email_address='bar'))")
+
+print("\nComparator.has()(used for scalar references):")
+print("query.filter(Address.user.has(name='ed'))")
+
+print("\nQuery.with_parent()(used for any relationship):")
+print("session.query(Address).with_parent(someuser, 'addresses')")
+
