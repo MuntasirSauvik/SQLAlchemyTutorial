@@ -432,3 +432,78 @@ jacks_addresses = session.query(Address).\
                                 all()
 print("jacks_addresses: ", jacks_addresses)
 print("jacks_addresses[0].user: ", jacks_addresses[0].user)
+
+# Deleting
+print("\nDeleting:")
+print("Let’s try to delete jack and see how that goes. We’ll mark the object as deleted in the session, then we’ll "
+      "issue a count query to see that no rows remain::")
+session.delete(jack)
+print("session.query(User).filter_by(name='jack').count(): ", session.query(User).filter_by(name='jack').count())
+
+print("\nSo far, so good. How about Jack’s Address objects ?:")
+print("session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count():",
+      session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count())
+
+# Configuring delete/delete-orphan Cascade
+print("\nConfiguring delete/delete-orphan Cascade:")
+print("While SQLAlchemy allows you to add new attributes and relationships to mappings at any point in time, in this "
+      "case the existing relationship needs to be removed, so we need to tear down the mappings completely and start "
+      "again - we’ll close the Session:")
+print("\nsession.close(): ")
+session.close()
+
+print("\nAnd use a new declarative_base():")
+print("Base = declarative_base()")
+Base = declarative_base()
+print("\nNext we’ll declare the User class, adding in the addresses relationship including the cascade configuration "
+      "(we’ll leave the constructor out too):")
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    fullname = Column(String)
+    nickname = Column(String)
+
+    addresses = relationship("Address", back_populates='user',
+                        cascade="all, delete, delete-orphan")
+
+    def __repr__(self):
+        return "<User(name='%s', fullname='%s', nickname='%s')>" % (
+                                self.name, self.fullname, self.nickname)
+
+print("\nThen we recreate Address, noting that in this case we’ve created the Address.user relationship via the User "
+      "class already:")
+class Address(Base):
+    __tablename__ = 'addresses'
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship("User", back_populates="addresses")
+
+    def __repr__(self):
+        return "<Address(email_address='%s')>" % self.email_address
+print("\nNow when we load the user jack (below using Query.get(), which loads by primary key), removing an address "
+      "from the corresponding addresses collection will result in that Address being deleted:")
+print("load Jack by primary key")
+print("jack = session.query(User).get(5)")
+jack = session.query(User).get(5)
+print("jack = ", jack)
+
+print("\nremove one Address (lazy load fires off)")
+print("del jack.addresses[1]")
+del jack.addresses[1]
+
+print("\nonly one address remains")
+print("session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count(): ",
+        session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count())
+
+print("\nDeleting Jack will delete both Jack and the remaining Address associated with the user:")
+
+print("session.delete(jack)")
+session.delete(jack)
+
+print("session.query(User).filter_by(name='jack').count(): ", session.query(User).filter_by(name='jack').count())
+
+print("session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count(): ",
+    session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count())
