@@ -11,6 +11,9 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 from sqlalchemy.sql import exists
+from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager
 
 # Version Check
 print("Version Check")
@@ -401,3 +404,31 @@ print("query.filter(Address.user.has(name='ed'))")
 print("\nQuery.with_parent()(used for any relationship):")
 print("session.query(Address).with_parent(someuser, 'addresses')")
 
+# Eager Loading
+print("\nEager Loading:")
+print("Selectin Load:")
+jack = session.query(User).\
+        options(selectinload(User.addresses)).\
+        filter_by(name='jack').one()
+print("jack: ", jack)
+print("jack.addresses: ",jack.addresses)
+
+# Joined Load
+print("\nJoined Load:")
+jack = session.query(User). \
+        options(joinedload(User.addresses)). \
+        filter_by(name='jack').one()
+print("jack: ", jack)
+print("jack.addresses: ",jack.addresses)
+
+# Explicit Join + Eagerload
+print("\nExplicit Join + Eagerload:")
+print("Below we illustrate loading an Address row as well as the related User object, filtering on the User named "
+      "“jack” and using contains_eager() to apply the “user” columns to the Address.user attribute:")
+jacks_addresses = session.query(Address).\
+                                join(Address.user).\
+                                filter(User.name=='jack').\
+                                options(contains_eager(Address.user)).\
+                                all()
+print("jacks_addresses: ", jacks_addresses)
+print("jacks_addresses[0].user: ", jacks_addresses[0].user)
