@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import aliased
+from sqlalchemy import text
 
 # Version Check
 print("Version Check")
@@ -206,3 +207,30 @@ print("Query.one() fully fetches all rows, and if not exactly one object identit
 print("\nQuery.scalar() invokes the Query.one() method, and upon success returns the first column of the row:")
 query = session.query(User.id).filter(User.name == 'ed').order_by(User.id)
 print(query.scalar())
+
+# Using Textual SQL
+
+print("Literal strings can be used flexibly with Query, by specifying their use with the text() construct, which is "
+      "accepted by most applicable methods. For example, Query.filter() and Query.order_by():")
+for user in session.query(User).filter(text("id<224")).order_by(text("id")).all():
+    print(user.name)
+
+print("\nBind parameters can be specified with string-based SQL, using a colon. To specify the values, use the "
+      "Query.params() method:")
+print(session.query(User).filter(text("id<:value and name=:name")).params(value=224, name='fred').order_by(User.id).one())
+
+print("To use an entirely string-based statement, a text() construct representing a complete statement can be passed to"
+      "Query.from_statement(). ")
+print(session.query(User).from_statement(
+    text("SELECT * FROM users where name=:name")).params(name='ed').all())
+print("\nthe text() construct allows us to link its textual SQL to Core or ORM-mapped column expressions positionally; "
+      "we can achieve this by passing column expressions as positional arguments to the TextClause.columns() method:")
+stmt = text("SELECT name, id, fullname, nickname FROM users where name=:name")
+stmt = stmt.columns(User.name, User.id, User.fullname, User.nickname)
+print(session.query(User).from_statement(stmt).params(name='ed').all())
+
+print("\nWhen selecting from a text() construct, the Query may still specify what columns and entities are to be "
+      "returned; instead of query(User) we can also ask for the columns individually, as in any other case:")
+stmt = text("SELECT name, id FROM users where name=:name")
+stmt = stmt.columns(User.name, User.id)
+print(session.query(User.id, User.name).from_statement(stmt).params(name='ed').all())
