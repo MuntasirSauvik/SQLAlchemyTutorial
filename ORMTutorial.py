@@ -267,3 +267,35 @@ User.addresses = relationship("Address", order_by=Address.id, back_populates="us
 print("\nWe’ll need to create the addresses table in the database, so we will issue another CREATE from our metadata, "
       "which will skip over tables which have already been created:")
 Base.metadata.create_all(engine)
+
+# Working with related Objects
+print("\nWorking with related Objects:")
+print("\nNow when we create a User, a blank addresses collection will be present. Various collection types, such as "
+      "sets and dictionaries, are possible here ")
+jack = User(name='jack', fullname='Jack Bean', nickname='gjffdd')
+print("jack:",jack)
+print("jack.addresses:",jack.addresses)
+
+print("\nWe are free to add Address objects on our User object. In this case we just assign a full list directly:")
+print("jack.addresses before assignment:",jack.addresses)
+jack.addresses =[
+                    Address(email_address='jack@google.com'),
+                    Address(email_address='j25@yahoo.com')]
+print("jack.addresses after assignment:",jack.addresses)
+
+print("\nDemonstrating bidirectional relationship:")
+print("jack.addresses[1]:",jack.addresses[1])
+print("jack.addresses[1].user:",jack.addresses[1].user)
+
+print("\nLet’s add and commit Jack Bean to the database. jack as well as the two Address members in the corresponding "
+      "addresses collection are both added to the session at once, using a process known as cascading:")
+session.add(jack)
+session.commit()
+
+print("\nQuerying for Jack, we get just Jack back. No SQL is yet issued for Jack’s addresses:")
+jack = session.query(User).filter_by(name='jack').one()
+print("Querying before lazy loading:\njack:",jack)
+print("Querying for Jack, we get just Jack back. No SQL is yet issued for Jack’s addresses:")
+print("\nLet’s look at the addresses collection. Watch the SQL:")
+print("jack.addresses:",jack.addresses)
+
