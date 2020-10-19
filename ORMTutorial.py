@@ -555,3 +555,37 @@ class Keyword(Base):
 
     def __init__(self, keyword):
         self.keyword = keyword
+print("\nwe use a setting accepted by relationship() called lazy='dynamic', which configures an alternate loader "
+      "strategy on the attribute:")
+BlogPost.author = relationship(User, back_populates="posts")
+User.posts = relationship(BlogPost, back_populates="author", lazy="dynamic")
+
+print("Create new tables:")
+Base.metadata.create_all(engine)
+
+print("\nUsage is not too different from what we’ve been doing. Let’s give Wendy some blog posts:")
+wendy = session.query(User).\
+        filter_by(name='wendy').\
+        one()
+post = BlogPost("Wendy's Blog Post", "This is a test", wendy)
+session.add(post)
+
+print("\nWe’re storing keywords uniquely in the database, but we know that we don’t have any yet, so we can just create"
+      " them:")
+post.keywords.append(Keyword('wendy'))
+post.keywords.append(Keyword('firstpost'))
+
+print("\nWe can now look up all blog posts with the keyword ‘firstpost’. We’ll use the any operator to locate “blog "
+      "posts where any of its keywords has the keyword string ‘firstpost’”:")
+print("session.query(BlogPost).filter(BlogPost.keywords.any(keyword='firstpost')).all():\n",
+        session.query(BlogPost).filter(BlogPost.keywords.any(keyword='firstpost')).all())
+
+print("\nIf we want to look up posts owned by the user wendy, we can tell the query to narrow down to that User object "
+      "as a parent:")
+print("session.query(BlogPost).filter(BlogPost.author==wendy).filter(BlogPost.keywords.any(keyword='firstpost')).all():"
+      "\n",session.query(BlogPost).filter(BlogPost.author==wendy).filter(BlogPost.keywords.any(keyword='firstpost')).\
+                                                                                                                all())
+
+print("\nOr we can use Wendy’s own posts relationship, which is a “dynamic” relationship, to query straight frm there:")
+print("wendy.posts.filter(BlogPost.keywords.any(keyword='firstpost')).all():\n",
+      wendy.posts.filter(BlogPost.keywords.any(keyword='firstpost')).all())
