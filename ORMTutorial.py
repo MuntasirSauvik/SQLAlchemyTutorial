@@ -6,6 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import aliased
 from sqlalchemy import text
 from sqlalchemy import func
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 # Version Check
 print("Version Check")
@@ -245,3 +247,23 @@ print("\nsession.query(func.count(User.name), User.name).group_by(User.name).all
 print("\nsession.query(func.count('*')).select_from(User).scalar():",session.query(func.count('*')).select_from(User).scalar())
 print("\nThe usage of Query.select_from() can be removed if we express the count in terms of the User primary key directly:")
 print("session.query(func.count(User.id)).scalar():",session.query(func.count(User.id)).scalar())
+
+
+# Building a Relationship
+print("\nBuilding a Relationship")
+class Address(Base):
+    __tablename__ = 'addresses'
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+
+    user = relationship("User", back_populates="addresses")
+
+    def __repr__(self):
+        return "<Address(email_address='%s')>" % self.email_address
+
+User.addresses = relationship("Address", order_by=Address.id, back_populates="user")
+
+print("\nWe’ll need to create the addresses table in the database, so we will issue another CREATE from our metadata, "
+      "which will skip over tables which have already been created:")
+Base.metadata.create_all(engine)
