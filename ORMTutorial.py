@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import aliased
 from sqlalchemy import text
+from sqlalchemy import func
 
 # Version Check
 print("Version Check")
@@ -234,3 +235,13 @@ print("\nWhen selecting from a text() construct, the Query may still specify wha
 stmt = text("SELECT name, id FROM users where name=:name")
 stmt = stmt.columns(User.name, User.id)
 print(session.query(User.id, User.name).from_statement(stmt).params(name='ed').all())
+
+# Counting
+print("\nCounting")
+print("Query includes a convenience method for counting called Query.count():")
+print("session.query(User).filter(User.name.like('%ed')).count():",session.query(User).filter(User.name.like('%ed')).count())
+
+print("\nsession.query(func.count(User.name), User.name).group_by(User.name).all():",session.query(func.count(User.name), User.name).group_by(User.name).all())
+print("\nsession.query(func.count('*')).select_from(User).scalar():",session.query(func.count('*')).select_from(User).scalar())
+print("\nThe usage of Query.select_from() can be removed if we express the count in terms of the User primary key directly:")
+print("session.query(func.count(User.id)).scalar():",session.query(func.count(User.id)).scalar())
