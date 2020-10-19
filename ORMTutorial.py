@@ -81,3 +81,30 @@ session.commit()
 # If we look at Ed’s id attribute, which earlier was None, it now has a value:
 print("\nIf we look at Ed’s id attribute, which earlier was None, it now has a value:")
 print("ed_user.id: ", ed_user.id)
+
+# Rolling Back
+print("\nRolling back")
+# Let’s make two changes that we’ll revert; ed_user’s user name gets set to Edwardo:
+print("\nLet’s make two changes that we’ll revert; ed_user’s user name gets set to Edwardo:")
+print("ed_user.name before change: ",ed_user.name)
+ed_user.name = 'Edwardo'
+print("ed_user.name after change: ",ed_user.name)
+
+# we’ll add another erroneous user, fake_user:
+print("\nwe’ll add another erroneous user, fake_user:")
+fake_user = User(name='fakeuser', fullname='Invalid', nickname='12345')
+session.add(fake_user)
+
+# Querying the session, we can see that they’re flushed into the current transaction:
+print("\nQuerying the session, we can see that they’re flushed into the current transaction:")
+print(session.query(User).filter(User.name.in_(['Edwardo', 'fakeuser'])).all())
+
+# Rolling back, we can see that ed_user’s name is back to ed, and fake_user has been kicked out of the session:
+print("\nRolling back, we can see that ed_user’s name is back to ed, and fake_user has been kicked out of the session:")
+session.rollback()
+print("ed_user.name: ", ed_user.name)
+print("fake_user in session: ", fake_user in session)
+
+# issuing a SELECT illustrates the changes made to the database:
+print("\nissuing a SELECT illustrates the changes made to the database:")
+print(session.query(User).filter(User.name.in_(['ed', 'fakeuser'])).all())
