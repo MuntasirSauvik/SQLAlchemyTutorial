@@ -299,3 +299,17 @@ print("Querying for Jack, we get just Jack back. No SQL is yet issued for Jackâ€
 print("\nLetâ€™s look at the addresses collection. Watch the SQL:")
 print("jack.addresses:",jack.addresses)
 
+# Querying with Joins
+print("\nQuerying with Joins:")
+print("To construct a simple implicit join between User and Address, we can use Query.filter() to equate their related "
+      "columns together. Below we load the User and Address entities at once using this method:")
+
+for u, a in session.query(User, Address).filter(
+                                        User.id==Address.user_id).filter(
+                                        Address.email_address=='jack@google.com').all():
+    print("u:",u)
+    print("a:",a)
+
+print("\nThe actual SQL JOIN syntax, on the other hand, is most easily achieved using the Query.join() method:")
+print(session.query(User, Address).join(Address).filter(
+                                        Address.email_address=='jack@google.com').all())
