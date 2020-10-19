@@ -507,3 +507,6 @@ print("session.query(User).filter_by(name='jack').count(): ", session.query(User
 
 print("session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count(): ",
     session.query(Address).filter(Address.email_address.in_(['jack@google.com', 'j25@yahoo.com'])).count())
+
+# Building a Many To Many Relationship
+print("\n Building a Many To Many Relationship:")
