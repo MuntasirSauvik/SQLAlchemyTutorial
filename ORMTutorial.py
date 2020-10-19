@@ -178,3 +178,15 @@ print("for user in session.query(User).filter(User.name=='ed').filter(User.fulln
         "\n    print(user)")
 for user in session.query(User).filter(User.name=='ed').filter(User.fullname=='Ed Jones'):
     print(user)
+
+# Common Filter Operators
+print("\nCommon Filter Operators:")
+print("\nHere’s a rundown of some of the most common operators used in filter():")
+print("ColumnOperators.__eq__():\nquery.filter(User.name == 'ed'):")
+print("ColumnOperators.__ne__():\nquery.filter(User.name != 'ed')")
+print("ColumnOperators.like():\nquery.filter(User.name.like('%ed%'))")
+print("ColumnOperators.ilike() (case-insensitive LIKE):\nquery.filter(User.name.queryilike('%ed%'))")
+print("ColumnOperators.notin_():\nquery.filter(~User.name.in_(['ed', 'wendy', 'jack']))")
+print("ColumnOperators.is_():\nquery.filter(User.name == None)")
+print("alternatively, if pep8/linters are a concern:\nquery.filter(User.name.is_(None))")
+print("More examples are on the tutorial page")
