@@ -190,3 +190,19 @@ print("ColumnOperators.notin_():\nquery.filter(~User.name.in_(['ed', 'wendy', 'j
 print("ColumnOperators.is_():\nquery.filter(User.name == None)")
 print("alternatively, if pep8/linters are a concern:\nquery.filter(User.name.is_(None))")
 print("More examples are on the tutorial page")
+
+# Returning Lists and Scalars
+print("\nReturning Lists and Scalars:")
+print("A number of methods on Query immediately issue SQL and return a value containing loaded database results.")
+print("Query.all() returns a list:")
+query = session.query(User).filter(User.name.like('%ed')).order_by(User.id)
+print(query.all())
+print("Query.first() applies a limit of one and returns the first result as a scalar:")
+print(query.first())
+print("Query.one() fully fetches all rows, and if not exactly one object identity or composite row is present in the "
+      "result, raises an error. With multiple rows found:")
+# user = query.one()
+# print(user)
+print("\nQuery.scalar() invokes the Query.one() method, and upon success returns the first column of the row:")
+query = session.query(User.id).filter(User.name == 'ed').order_by(User.id)
+print(query.scalar())
