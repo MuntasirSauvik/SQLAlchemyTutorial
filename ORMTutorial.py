@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import aliased
 
 # Version Check
 print("Version Check")
@@ -108,3 +109,72 @@ print("fake_user in session: ", fake_user in session)
 # issuing a SELECT illustrates the changes made to the database:
 print("\nissuing a SELECT illustrates the changes made to the database:")
 print(session.query(User).filter(User.name.in_(['ed', 'fakeuser'])).all())
+
+# Querying
+print("\nQuerying")
+for instance in session.query(User).order_by(User.id):
+    print(instance.name, instance.fullname)
+
+# The Query also accepts ORM-instrumented descriptors as arguments. Any time multiple class entities or column-based
+# entities are expressed as arguments to the query() function, the return result is expressed as tuples:
+print("\nThe Query also accepts ORM-instrumented descriptors as arguments. Any time multiple class entities or column-"
+      "based entities are expressed as arguments to the query() function, the return result is expressed as tuples:")
+for name, fullname in session.query(User.name, User.fullname):
+    print(name, fullname)
+# The tuples returned by Query are named tuples, supplied by the KeyedTuple class, and can be treated much like an
+# ordinary Python object. The names are the same as the attribute’s name for an attribute, and the class name for a
+# class:
+print("\nThe tuples returned by Query are named tuples, supplied by the KeyedTuple class, and can be treated much like "
+      "an ordinary Python object. The names are the same as the attribute’s name for an attribute, and the class name "
+      "for a class:")
+for row in session.query(User, User.name).all():
+    print(row.User, row.name)
+
+# You can control the names of individual column expressions using the ColumnElement.label() construct, which is
+# available from any ColumnElement-derived object, as well as any class attribute which is mapped to one (such as
+# User.name):
+print("\nYou can control the names of individual column expressions using the ColumnElement.label() construct, which is"
+      "available from any ColumnElement-derived object, as well as any class attribute which is mapped to one (such as "
+      "User.name):")
+for row in session.query(User.name.label('name_label')).all():
+    print(row.name_label)
+
+# Using alias
+print("\nUsing Alias:")
+user_alias = aliased(User, name='user_alias')
+for row in session.query(user_alias, user_alias.name).all():
+    print(row.user_alias)
+
+# Basic operations with Query include issuing LIMIT and OFFSET, most conveniently using Python array slices and
+# typically in conjunction with ORDER BY:
+print("\nBasic operations with Query include issuing LIMIT and OFFSET, most conveniently using Python array slices and "
+      "typically in conjunction with ORDER BY:")
+print("for u in session.query(User).order_by(User.id)[1:3]:"
+      "\n     print(u)")
+for u in session.query(User).order_by(User.id)[1:3]:
+    print(u)
+
+#  filtering results, which is accomplished either with filter_by(), which uses keyword arguments:
+print("\nfiltering results, which is accomplished either with filter_by(), which uses keyword arguments:")
+print("for name, in session.query(User.name).filter_by(fullname='Ed Jones'):"
+        "\n   print(name)")
+for name, in session.query(User.name).filter_by(fullname='Ed Jones'):
+    print(name)
+
+# filter(), which uses more flexible SQL expression language constructs. These allow you to use regular Python operators
+# with the class-level attributes on your mapped class:
+print("\n# filter(), which uses more flexible SQL expression language constructs. These allow you to use regular Python"
+      "operators with the class-level attributes on your mapped class:")
+print("for name, in session.query(User.name).filter(User.fullname=='Ed Jones'):"
+        "\n    print(name)")
+for name, in session.query(User.name).filter(User.fullname=='Ed Jones'):
+    print(name)
+
+# to query for users named “ed” with a full name of “Ed Jones”, you can call filter() twice, which joins criteria using
+# AND:
+print("\nto query for users named “ed” with a full name of “Ed Jones”, you can call filter() twice, which joins "
+      "criteria using AND:")
+print("for user in session.query(User).filter(User.name=='ed').filter(User.fullname=='Ed Jones'):"
+        "\n    print(user)")
+for user in session.query(User).filter(User.name=='ed').filter(User.fullname=='Ed Jones'):
+    print(user)
